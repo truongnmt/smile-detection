@@ -1,0 +1,11 @@
+GENKI 4K
+------------------------------------------------------------------------------------
+
+This is the GENKI 4K dataset, collected by the Machine Perception Laboratory,
+University of California, San Diego. This dataset contains 4000 images along 
+with expression (smile=1, non-smile=0) labels and pose labels (yaw, pitch, and roll,
+in radians). The file "labels.txt" contains these labels, and the Nth line of the
+file corresponds to N in the "files" directory.
+
+We ask that you acknowledge use of this dataset in any papers you publish with the following citation:
+	"http://mplab.ucsd.edu, The MPLab GENKI-4K Dataset."
