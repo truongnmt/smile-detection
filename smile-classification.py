@@ -260,7 +260,7 @@ with graph.as_default():
   # Training computation.
   logits = model(tf_train_dataset)
   loss = tf.reduce_mean(
-    tf.nn.softmax_cross_entropy_with_logits(logits, tf_train_labels))
+    tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=tf_train_labels))
     
   # Optimizer.
   optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(loss)
