@@ -1,3 +1,4 @@
 GENKI4K/*/
+*.pickle
 datasets/test_folder/*.pickle
 datasets/train_folder/*.pickle
