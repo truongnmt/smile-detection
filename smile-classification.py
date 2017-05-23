@@ -142,9 +142,9 @@ def merge_datasets(pickle_files, train_size, valid_size=0):
 # train_size = 2800
 # valid_size = 800
 # test_size = 400
-train_size = 1000
-valid_size = 100
-test_size = 100
+train_size = 1800
+valid_size = 600
+test_size = 600
 
 valid_dataset, valid_labels, train_dataset, train_labels = merge_datasets(
   train_datasets, train_size, valid_size)
