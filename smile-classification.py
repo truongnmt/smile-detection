@@ -1,4 +1,6 @@
 from __future__ import print_function
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -17,29 +19,19 @@ num_classes = 2
 train_folders = ['datasets/train_folder/0', 'datasets/train_folder/1']
 test_folders = ['datasets/test_folder/0', 'datasets/test_folder/1']
 
-# def disp_samples(folder, sample_size):
-# 	print(folder)
-# 	image_files = os.listdir(folder)
-# 	image_sample = random.sample(image_files, sample_size)
-# 	for image in image_sample:
-# 		image_file = os.path.join(folder, image)
-# 		i = Image.open(image_file)
-# 		i.show();
-
-# disp_samples('datasets', 1)
-
 image_size = 64
 pixel_depth = 255.0
 image_depth = 3
 
-
+# load each class to a seperate dataset, store them on disk
+# convert the entire dataset into a 3D array (image index, x, y, z) 
+# of floating point values normalized to have approximately zero mean and standard deviation ~0.5
 def load_image(folder, min_num_images):
   """Load the image for a single smile/non-smile lable."""
   image_files = os.listdir(folder)
   dataset = np.ndarray(shape=(len(image_files), image_size, image_size, image_depth),
                          dtype=np.float32)
   image_index = 0
-  print(folder)
   for image in os.listdir(folder):
     image_file = os.path.join(folder, image)
     try:
@@ -63,6 +55,22 @@ def load_image(folder, min_num_images):
   print('Mean:', np.mean(dataset))
   print('Standard deviation:', np.std(dataset))
   return dataset
+# Pickling datasets/train_folder/0.pickle.
+# Full dataset tensor: (1238, 64, 64, 3)
+# Mean: -0.0335986
+# Standard deviation: 0.247544
+# Pickling datasets/train_folder/1.pickle.
+# Full dataset tensor: (1562, 64, 64, 3)
+# Mean: -0.0137995
+# Standard deviation: 0.249232
+# Pickling datasets/test_folder/0.pickle.
+# Full dataset tensor: (600, 64, 64, 3)
+# Mean: -0.0210533
+# Standard deviation: 0.249451
+# Pickling datasets/test_folder/1.pickle.
+# Full dataset tensor: (600, 64, 64, 3)
+# Mean: -0.00345457
+# Standard deviation: 0.249467                 
 
 def maybe_pickle(data_folders, min_num_images_per_class, force=False):
   dataset_names = []
@@ -98,62 +106,57 @@ def make_arrays(nb_rows, img_size, img_depth=3):
 
 def merge_datasets(pickle_files, train_size, valid_size=0):
   num_classes = len(pickle_files)
-  # = 2
 
   valid_dataset, valid_labels = make_arrays(valid_size, image_size)
   train_dataset, train_labels = make_arrays(train_size, image_size)
-  vsize_per_class = valid_size // num_classes
-  tsize_per_class = train_size // num_classes
-
-  # print(vsize_per_class) = valid size per class : 400
-  # print(tsize_per_class) = train size per class : 1400
+  vsize_per_class = valid_size // num_classes # 400
+  tsize_per_class = train_size // num_classes # 200
     
   start_v, start_t = 0, 0
   end_v, end_t = vsize_per_class, tsize_per_class
   end_l = vsize_per_class+tsize_per_class
   for label, pickle_file in enumerate(pickle_files):
-    # print(label) = 0
-    # print(pickle_file) = datasets/train_folder/0.pickle
+    # print(pickle_file)
     
     try:
       with open(pickle_file, 'rb') as f:
-        letter_set = pickle.load(f)
-        # let's shuffle the letters to have random validation and training set
-        np.random.shuffle(letter_set)
+        smile_nonsmile_set = pickle.load(f)
+        # print(smile_nonsmile_set.shape)
+
+        # let's shuffle the smile / nonsmile class
+        # to have random validation and training set
+        np.random.shuffle(smile_nonsmile_set)
         if valid_dataset is not None:
-          valid_letter = letter_set[:vsize_per_class, :, :]
-          valid_dataset[start_v:end_v, :, :] = valid_letter
+          valid_smile_nonsmile = smile_nonsmile_set[:vsize_per_class, :, :]
+          valid_dataset[start_v:end_v, :, :] = valid_smile_nonsmile
           valid_labels[start_v:end_v] = label
           start_v += vsize_per_class
           end_v += vsize_per_class
                     
-        train_letter = letter_set[vsize_per_class:end_l, :, :]
-        train_dataset[start_t:end_t, :, :] = train_letter
+        train_smile_nonsmile = smile_nonsmile_set[vsize_per_class:end_l, :, :]
+        train_dataset[start_t:end_t, :, :] = train_smile_nonsmile
         train_labels[start_t:end_t] = label
+
         start_t += tsize_per_class
         end_t += tsize_per_class
     except Exception as e:
       print('Unable to process data from', pickle_file, ':', e)
       raise
-    
   return valid_dataset, valid_labels, train_dataset, train_labels
-            
-            
-# train_size = 2800
-# valid_size = 800
-# test_size = 400
-train_size = 1800
-valid_size = 600
-test_size = 600
 
-valid_dataset, valid_labels, train_dataset, train_labels = merge_datasets(
-  train_datasets, train_size, valid_size)
-_, _, test_dataset, test_labels = merge_datasets(test_datasets, test_size)
+# train_size = 2800
+train_size = 2400
+valid_size = 800
+test_size = 400
+
+_, _, train_dataset, train_labels = merge_datasets(
+  train_datasets, train_size)
+valid_dataset, valid_labels, test_dataset, test_labels = merge_datasets(
+  test_datasets, test_size, valid_size)
 
 print('Training:', train_dataset.shape, train_labels.shape)
 print('Validation:', valid_dataset.shape, valid_labels.shape)
 print('Testing:', test_dataset.shape, test_labels.shape)
-
 
 def randomize(dataset, labels):
   permutation = np.random.permutation(labels.shape[0])
@@ -164,18 +167,16 @@ train_dataset, train_labels = randomize(train_dataset, train_labels)
 test_dataset, test_labels = randomize(test_dataset, test_labels)
 valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
 
-pretty_labels = {0: 'non-smile', 1: 'smile'}
-
+# pretty_labels = {0: 'non-smile', 1: 'smile'}
 # def disp_sample_dataset(dataset, labels):
 #   items = random.sample(range(len(labels)), 8)
 #   for i, item in enumerate(items):
 #     plt.subplot(2, 4, i+1)
 #     plt.axis('off')
 #     plt.title(pretty_labels[labels[item]])
-#     plt.imshow(dataset[item])
+#     plt.imshow(dataset[item],interpolation='nearest')
 #     plt.show()
 # disp_sample_dataset(train_dataset, train_labels)
-
 
 pickle_file = 'GENKI4K.pickle'
 
@@ -212,9 +213,15 @@ print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
 
+
+
 def accuracy(predictions, labels):
   return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
           / predictions.shape[0])
+
+
+
+
 
 batch_size = 16
 patch_size = 5
@@ -248,12 +255,14 @@ with graph.as_default():
   
   # Model.
   def model(data):
-    conv = tf.nn.conv2d(data, layer1_weights, [1, 2, 2, 1], padding='SAME')
-    hidden = tf.nn.relu(conv + layer1_biases)
-    conv = tf.nn.conv2d(hidden, layer2_weights, [1, 2, 2, 1], padding='SAME')
-    hidden = tf.nn.relu(conv + layer2_biases)
-    shape = hidden.get_shape().as_list()
-    reshape = tf.reshape(hidden, [shape[0], shape[1] * shape[2] * shape[3]])
+    conv1 = tf.nn.conv2d(data, layer1_weights, [1, 1, 1, 1], padding='SAME')
+    bias1 = tf.nn.relu(conv1 + layer1_biases)
+    pool1 = tf.nn.max_pool(bias1, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
+    conv2 = tf.nn.conv2d(pool1, layer2_weights, [1, 1, 1, 1], padding='SAME')
+    bias2 = tf.nn.relu(conv2 + layer2_biases)
+    pool2 = tf.nn.max_pool(bias2, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
+    shape = pool2.get_shape().as_list()
+    reshape = tf.reshape(pool2, [shape[0], shape[1] * shape[2] * shape[3]])
     hidden = tf.nn.relu(tf.matmul(reshape, layer3_weights) + layer3_biases)
     return tf.matmul(hidden, layer4_weights) + layer4_biases
   
@@ -270,10 +279,10 @@ with graph.as_default():
   valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
   test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
-  num_steps = 1001
+num_steps = 1001
 
 with tf.Session(graph=graph) as session:
-  tf.initialize_all_variables().run()
+  tf.global_variables_initializer().run()
   print('Initialized')
   for step in range(num_steps):
     offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
@@ -287,4 +296,5 @@ with tf.Session(graph=graph) as session:
       print('Minibatch accuracy: %.1f%%' % accuracy(predictions, batch_labels))
       print('Validation accuracy: %.1f%%' % accuracy(
         valid_prediction.eval(), valid_labels))
+      
   print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
