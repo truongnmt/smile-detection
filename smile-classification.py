@@ -7,9 +7,7 @@ import tensorflow as tf
 import os
 import sys
 import tarfile
-from PIL import Image
 from scipy import ndimage
-from sklearn.linear_model import LogisticRegression
 from six.moves.urllib.request import urlretrieve
 from six.moves import cPickle as pickle
 import random
@@ -146,17 +144,17 @@ def merge_datasets(pickle_files, train_size, valid_size=0):
 
 # train_size = 2800
 train_size = 2400
-valid_size = 800
-test_size = 400
+valid_size = 600
+test_size = 600
 
 _, _, train_dataset, train_labels = merge_datasets(
   train_datasets, train_size)
 valid_dataset, valid_labels, test_dataset, test_labels = merge_datasets(
   test_datasets, test_size, valid_size)
 
-print('Training:', train_dataset.shape, train_labels.shape)
-print('Validation:', valid_dataset.shape, valid_labels.shape)
-print('Testing:', test_dataset.shape, test_labels.shape)
+# print('Training:', train_dataset.shape, train_labels.shape)
+# print('Validation:', valid_dataset.shape, valid_labels.shape)
+# print('Testing:', test_dataset.shape, test_labels.shape)
 
 def randomize(dataset, labels):
   permutation = np.random.permutation(labels.shape[0])
@@ -169,8 +167,13 @@ valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
 
 # pretty_labels = {0: 'non-smile', 1: 'smile'}
 # def disp_sample_dataset(dataset, labels):
+#   print(labels)
+#   print(labels.shape)
+#   print(dataset)
+#   print(dataset.shape)
 #   items = random.sample(range(len(labels)), 8)
 #   for i, item in enumerate(items):
+#     print(item)
 #     plt.subplot(2, 4, i+1)
 #     plt.axis('off')
 #     plt.title(pretty_labels[labels[item]])
@@ -214,13 +217,9 @@ print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
 
 
-
 def accuracy(predictions, labels):
   return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
           / predictions.shape[0])
-
-
-
 
 
 batch_size = 16
@@ -242,13 +241,25 @@ with graph.as_default():
   # Variables.
   layer1_weights = tf.Variable(tf.truncated_normal(
       [patch_size, patch_size, num_channels, depth], stddev=0.1))
+  # depth: so filter
+  # 5x5x3x16
+  # 64x64x16
+
   layer1_biases = tf.Variable(tf.zeros([depth]))
+
   layer2_weights = tf.Variable(tf.truncated_normal(
       [patch_size, patch_size, depth, depth], stddev=0.1))
   layer2_biases = tf.Variable(tf.constant(1.0, shape=[depth]))
+  # 5x5x3x3
+  # 32x32x16
+
   layer3_weights = tf.Variable(tf.truncated_normal(
       [image_size // 4 * image_size // 4 * depth, num_hidden], stddev=0.1))
+  # 16x16x16
+  # 4096x64
+
   layer3_biases = tf.Variable(tf.constant(1.0, shape=[num_hidden]))
+
   layer4_weights = tf.Variable(tf.truncated_normal(
       [num_hidden, num_labels], stddev=0.1))
   layer4_biases = tf.Variable(tf.constant(1.0, shape=[num_labels]))
@@ -284,6 +295,7 @@ num_steps = 1001
 with tf.Session(graph=graph) as session:
   tf.global_variables_initializer().run()
   print('Initialized')
+  
   for step in range(num_steps):
     offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
     batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
@@ -296,5 +308,5 @@ with tf.Session(graph=graph) as session:
       print('Minibatch accuracy: %.1f%%' % accuracy(predictions, batch_labels))
       print('Validation accuracy: %.1f%%' % accuracy(
         valid_prediction.eval(), valid_labels))
-      
+
   print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
