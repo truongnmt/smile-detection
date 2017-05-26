@@ -7,9 +7,7 @@ import tensorflow as tf
 import os
 import sys
 import tarfile
-from PIL import Image
 from scipy import ndimage
-from sklearn.linear_model import LogisticRegression
 from six.moves.urllib.request import urlretrieve
 from six.moves import cPickle as pickle
 import random
@@ -146,17 +144,17 @@ def merge_datasets(pickle_files, train_size, valid_size=0):
 
 # train_size = 2800
 train_size = 2400
-valid_size = 800
-test_size = 400
+valid_size = 600
+test_size = 600
 
 _, _, train_dataset, train_labels = merge_datasets(
   train_datasets, train_size)
 valid_dataset, valid_labels, test_dataset, test_labels = merge_datasets(
   test_datasets, test_size, valid_size)
 
-print('Training:', train_dataset.shape, train_labels.shape)
-print('Validation:', valid_dataset.shape, valid_labels.shape)
-print('Testing:', test_dataset.shape, test_labels.shape)
+# print('Training:', train_dataset.shape, train_labels.shape)
+# print('Validation:', valid_dataset.shape, valid_labels.shape)
+# print('Testing:', test_dataset.shape, test_labels.shape)
 
 def randomize(dataset, labels):
   permutation = np.random.permutation(labels.shape[0])
@@ -169,8 +167,13 @@ valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
 
 # pretty_labels = {0: 'non-smile', 1: 'smile'}
 # def disp_sample_dataset(dataset, labels):
+#   print(labels)
+#   print(labels.shape)
+#   print(dataset)
+#   print(dataset.shape)
 #   items = random.sample(range(len(labels)), 8)
 #   for i, item in enumerate(items):
+#     print(item)
 #     plt.subplot(2, 4, i+1)
 #     plt.axis('off')
 #     plt.title(pretty_labels[labels[item]])
@@ -214,13 +217,9 @@ print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
 
 
-
 def accuracy(predictions, labels):
   return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
           / predictions.shape[0])
-
-
-
 
 
 batch_size = 16
@@ -239,32 +238,117 @@ with graph.as_default():
   tf_valid_dataset = tf.constant(valid_dataset)
   tf_test_dataset = tf.constant(test_dataset)
   
-  # Variables.
-  layer1_weights = tf.Variable(tf.truncated_normal(
-      [patch_size, patch_size, num_channels, depth], stddev=0.1))
-  layer1_biases = tf.Variable(tf.zeros([depth]))
-  layer2_weights = tf.Variable(tf.truncated_normal(
-      [patch_size, patch_size, depth, depth], stddev=0.1))
-  layer2_biases = tf.Variable(tf.constant(1.0, shape=[depth]))
-  layer3_weights = tf.Variable(tf.truncated_normal(
-      [image_size // 4 * image_size // 4 * depth, num_hidden], stddev=0.1))
-  layer3_biases = tf.Variable(tf.constant(1.0, shape=[num_hidden]))
-  layer4_weights = tf.Variable(tf.truncated_normal(
-      [num_hidden, num_labels], stddev=0.1))
-  layer4_biases = tf.Variable(tf.constant(1.0, shape=[num_labels]))
+  # Variables
+  layer1_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 3, 64], stddev=0.1)) 
+  layer1_1biases = tf.Variable(tf.zeros([64]))
+
+  layer1_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 64, 64], stddev=0.1))
+  layer1_2biases = tf.Variable(tf.constant(0.0, shape=[64]))
+  
+  layer2_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 64, 128], stddev=0.1))
+  layer2_1biases = tf.Variable(tf.constant(0.0, shape=[128]))
+
+  layer2_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 128, 128], stddev=0.1))
+  layer2_2biases = tf.Variable(tf.constant(0.0, shape=[128]))
+
+  layer3_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 128, 256], stddev=0.1))
+  layer3_1biases = tf.Variable(tf.constant(0.0, shape=[256]))
+
+  layer3_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 256, 256], stddev=0.1))
+  layer3_2biases = tf.Variable(tf.constant(0.0, shape=[256]))
+
+  layer3_3weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 256, 256], stddev=0.1))
+  layer3_3biases = tf.Variable(tf.constant(0.0, shape=[256]))
+
+  layer4_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 256, 512], stddev=0.1))
+  layer4_1biases = tf.Variable(tf.constant(0.0, shape=[512]))
+
+  layer4_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 512, 512], stddev=0.1))
+  layer4_2biases = tf.Variable(tf.constant(0.0, shape=[512]))
+
+  layer4_3weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 512, 512], stddev=0.1))
+  layer4_3biases = tf.Variable(tf.constant(0.0, shape=[512]))
   
   # Model.
   def model(data):
-    conv1 = tf.nn.conv2d(data, layer1_weights, [1, 1, 1, 1], padding='SAME')
-    bias1 = tf.nn.relu(conv1 + layer1_biases)
-    pool1 = tf.nn.max_pool(bias1, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
-    conv2 = tf.nn.conv2d(pool1, layer2_weights, [1, 1, 1, 1], padding='SAME')
-    bias2 = tf.nn.relu(conv2 + layer2_biases)
-    pool2 = tf.nn.max_pool(bias2, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
-    shape = pool2.get_shape().as_list()
-    reshape = tf.reshape(pool2, [shape[0], shape[1] * shape[2] * shape[3]])
-    hidden = tf.nn.relu(tf.matmul(reshape, layer3_weights) + layer3_biases)
-    return tf.matmul(hidden, layer4_weights) + layer4_biases
+    # conv1
+    conv1_1 = tf.nn.conv2d(data, layer1_1weights, [1,1,1,1], padding='SAME')    
+    bias1_1 = tf.nn.relu(conv1_1 + layer1_1biases)
+
+    conv1_2 = tf.nn.conv2d(bias1_1, layer1_2weights, [1,1,1,1], padding='SAME')    
+    bias1_2 = tf.nn.relu(conv1_2 + layer1_2biases)
+    
+    pool1 = tf.nn.max_pool(bias1_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+
+    # conv2
+    conv2_1 = tf.nn.conv2d(pool1, layer2_1weights, [1,1,1,1], padding='SAME')    
+    bias2_1 = tf.nn.relu(conv2_1 + layer2_1biases)
+
+    conv2_2 = tf.nn.conv2d(bias2_1, layer2_2weights, [1,1,1,1], padding='SAME')    
+    bias2_2 = tf.nn.relu(conv2_2 + layer2_2biases)
+    
+    pool2 = tf.nn.max_pool(bias2_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+
+    # conv3
+    conv3_1 = tf.nn.conv2d(pool2, layer3_1weights, [1,1,1,1], padding='SAME')    
+    bias3_1 = tf.nn.relu(conv3_1 + layer3_1biases)
+
+    conv3_2 = tf.nn.conv2d(bias3_1, layer3_2weights, [1,1,1,1], padding='SAME')    
+    bias3_2 = tf.nn.relu(conv3_2 + layer3_2biases)
+
+    conv3_3 = tf.nn.conv2d(bias3_2, layer3_3weights, [1,1,1,1], padding='SAME')    
+    bias3_3 = tf.nn.relu(conv3_3 + layer3_3biases)
+    
+    pool3 = tf.nn.max_pool(bias3_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+
+    # conv4
+    conv4_1 = tf.nn.conv2d(pool3, layer4_1weights, [1,1,1,1], padding='SAME')    
+    bias4_1 = tf.nn.relu(conv4_1 + layer4_1biases)
+
+    conv4_2 = tf.nn.conv2d(bias4_1, layer4_2weights, [1,1,1,1], padding='SAME')    
+    bias4_2 = tf.nn.relu(conv4_2 + layer4_2biases)
+
+    conv4_3 = tf.nn.conv2d(bias4_2, layer4_3weights, [1,1,1,1], padding='SAME')    
+    bias4_3 = tf.nn.relu(conv4_3 + layer4_3biases)
+    
+    pool4 = tf.nn.max_pool(bias4_3, [1,2,2,1], [1,2,2,1], padding='SAME')
+    
+    shape = int(np.prod(pool4.get_shape()[1:]))
+    # fully-connected layer
+    # fc1
+    fc1w = tf.Variable(tf.truncated_normal(
+      [shape, 4096], dtype=tf.float32, stddev=0.1))
+    fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+    pool4_flat = tf.reshape(pool4, [-1, shape])    
+    fc1 = tf.nn.relu(tf.matmul(pool4_flat, fc1w) + fc1b)
+
+    # fc2
+    fc2w = tf.Variable(tf.truncated_normal(
+      [4096, 4096], dtype=tf.float32, stddev=0.1))
+    fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+    fc2 = tf.nn.relu(tf.matmul(fc1, fc2w) + fc2b)
+
+    # fc3
+    fc3w = tf.Variable(tf.truncated_normal(
+      [4096, 1000], dtype=tf.float32, stddev=0.1))
+    fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
+    fc3 = tf.nn.relu(tf.matmul(fc2, fc3w) + fc3b)
+
+    # fc4
+    fc4w = tf.Variable(tf.truncated_normal(
+      [1000, 2], dtype=tf.float32, stddev=0.1))
+    fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
+    return tf.nn.relu(tf.matmul(fc3, fc4w) + fc4b)
   
   # Training computation.
   logits = model(tf_train_dataset)
@@ -284,6 +368,7 @@ num_steps = 1001
 with tf.Session(graph=graph) as session:
   tf.global_variables_initializer().run()
   print('Initialized')
+  
   for step in range(num_steps):
     offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
     batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
@@ -296,5 +381,5 @@ with tf.Session(graph=graph) as session:
       print('Minibatch accuracy: %.1f%%' % accuracy(predictions, batch_labels))
       print('Validation accuracy: %.1f%%' % accuracy(
         valid_prediction.eval(), valid_labels))
-      
+
   print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
