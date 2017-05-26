@@ -242,7 +242,6 @@ with graph.as_default():
   layer1_weights = tf.Variable(tf.truncated_normal(
       [patch_size, patch_size, num_channels, depth], stddev=0.1))
   # depth: so filter
-  # 5x5x3x16
   # 64x64x16
 
   layer1_biases = tf.Variable(tf.zeros([depth]))
@@ -250,19 +249,18 @@ with graph.as_default():
   layer2_weights = tf.Variable(tf.truncated_normal(
       [patch_size, patch_size, depth, depth], stddev=0.1))
   layer2_biases = tf.Variable(tf.constant(1.0, shape=[depth]))
-  # 5x5x3x3
   # 32x32x16
 
   layer3_weights = tf.Variable(tf.truncated_normal(
       [image_size // 4 * image_size // 4 * depth, num_hidden], stddev=0.1))
-  # 16x16x16
-  # 4096x64
-
   layer3_biases = tf.Variable(tf.constant(1.0, shape=[num_hidden]))
+  # 16x16x16x64
+  # 4096x64
 
   layer4_weights = tf.Variable(tf.truncated_normal(
       [num_hidden, num_labels], stddev=0.1))
   layer4_biases = tf.Variable(tf.constant(1.0, shape=[num_labels]))
+  # 64x2
   
   # Model.
   def model(data):
