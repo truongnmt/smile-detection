@@ -10,7 +10,7 @@ We present an automated approach for smile detection on GENKI4K dataset.
 
 ### Running
 
-We use OpenCV to detect face, crop, resize and save it to a new image. You could run this step (require OpenCV): **python face-detect-crop.py** but we have do it already for you.
+We use OpenCV to detect face, crop, resize and save it to a new image. You could run this step (require OpenCV): **python face-detect-crop.py** but we have done it already for you.
 
 You could run by using python:
 
