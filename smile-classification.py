@@ -1,6 +1,6 @@
 from __future__ import print_function
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+# import os
+# os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -21,9 +21,6 @@ image_size = 64
 pixel_depth = 255.0
 image_depth = 3
 
-# load each class to a seperate dataset, store them on disk
-# convert the entire dataset into a 3D array (image index, x, y, z) 
-# of floating point values normalized to have approximately zero mean and standard deviation ~0.5
 def load_image(folder, min_num_images):
   """Load the image for a single smile/non-smile lable."""
   image_files = os.listdir(folder)
@@ -53,22 +50,8 @@ def load_image(folder, min_num_images):
   print('Mean:', np.mean(dataset))
   print('Standard deviation:', np.std(dataset))
   return dataset
-# Pickling datasets/train_folder/0.pickle.
-# Full dataset tensor: (1238, 64, 64, 3)
-# Mean: -0.0335986
-# Standard deviation: 0.247544
-# Pickling datasets/train_folder/1.pickle.
-# Full dataset tensor: (1562, 64, 64, 3)
-# Mean: -0.0137995
-# Standard deviation: 0.249232
-# Pickling datasets/test_folder/0.pickle.
-# Full dataset tensor: (600, 64, 64, 3)
-# Mean: -0.0210533
-# Standard deviation: 0.249451
-# Pickling datasets/test_folder/1.pickle.
-# Full dataset tensor: (600, 64, 64, 3)
-# Mean: -0.00345457
-# Standard deviation: 0.249467                 
+
+#################################################################          
 
 def maybe_pickle(data_folders, min_num_images_per_class, force=False):
   dataset_names = []
@@ -92,6 +75,7 @@ def maybe_pickle(data_folders, min_num_images_per_class, force=False):
 train_datasets = maybe_pickle(train_folders, 1200)
 test_datasets = maybe_pickle(test_folders, 500)
 
+#################################################################
 
 # merge and prune data
 def make_arrays(nb_rows, img_size, img_depth=3):
@@ -156,6 +140,8 @@ valid_dataset, valid_labels, test_dataset, test_labels = merge_datasets(
 # print('Validation:', valid_dataset.shape, valid_labels.shape)
 # print('Testing:', test_dataset.shape, test_labels.shape)
 
+#################################################################
+
 def randomize(dataset, labels):
   permutation = np.random.permutation(labels.shape[0])
   shuffled_dataset = dataset[permutation,:,:]
@@ -202,8 +188,10 @@ except Exception as e:
 statinfo = os.stat(pickle_file)
 print('Compressed pickle size:', statinfo.st_size)
 
+#################################################################
+
 num_labels = 2
-num_channels = image_depth
+num_channels = image_depth # = 3 (RGB)
 def reformat(dataset, labels):
   dataset = dataset.reshape(
     (-1, image_size, image_size, num_channels)).astype(np.float32)
@@ -238,42 +226,136 @@ with graph.as_default():
   tf_valid_dataset = tf.constant(valid_dataset)
   tf_test_dataset = tf.constant(test_dataset)
   
-  # Variables.
-  layer1_weights = tf.Variable(tf.truncated_normal(
-      [patch_size, patch_size, num_channels, depth], stddev=0.1))
-  # depth: so filter
-  # 64x64x16
+  # Variables
+  layer1_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 3, 64], stddev=0.1)) 
+  layer1_1biases = tf.Variable(tf.zeros([64]))
 
-  layer1_biases = tf.Variable(tf.zeros([depth]))
+  layer1_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 64, 64], stddev=0.1))
+  layer1_2biases = tf.Variable(tf.constant(0.0, shape=[64]))
+  
+  layer2_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 64, 128], stddev=0.1))
+  layer2_1biases = tf.Variable(tf.constant(0.0, shape=[128]))
 
-  layer2_weights = tf.Variable(tf.truncated_normal(
-      [patch_size, patch_size, depth, depth], stddev=0.1))
-  layer2_biases = tf.Variable(tf.constant(1.0, shape=[depth]))
-  # 32x32x16
+  layer2_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 128, 128], stddev=0.1))
+  layer2_2biases = tf.Variable(tf.constant(0.0, shape=[128]))
 
-  layer3_weights = tf.Variable(tf.truncated_normal(
-      [image_size // 4 * image_size // 4 * depth, num_hidden], stddev=0.1))
-  layer3_biases = tf.Variable(tf.constant(1.0, shape=[num_hidden]))
-  # 16x16x16x64
-  # 4096x64
+  layer3_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 128, 256], stddev=0.1))
+  layer3_1biases = tf.Variable(tf.constant(0.0, shape=[256]))
 
-  layer4_weights = tf.Variable(tf.truncated_normal(
-      [num_hidden, num_labels], stddev=0.1))
-  layer4_biases = tf.Variable(tf.constant(1.0, shape=[num_labels]))
-  # 64x2
+  layer3_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 256, 256], stddev=0.1))
+  layer3_2biases = tf.Variable(tf.constant(0.0, shape=[256]))
+
+  layer3_3weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 256, 256], stddev=0.1))
+  layer3_3biases = tf.Variable(tf.constant(0.0, shape=[256]))
+
+  layer4_1weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 256, 512], stddev=0.1))
+  layer4_1biases = tf.Variable(tf.constant(0.0, shape=[512]))
+
+  layer4_2weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 512, 512], stddev=0.1))
+  layer4_2biases = tf.Variable(tf.constant(0.0, shape=[512]))
+
+  layer4_3weights = tf.Variable(tf.truncated_normal(
+      [3, 3, 512, 512], stddev=0.1))
+  layer4_3biases = tf.Variable(tf.constant(0.0, shape=[512]))
+
+  # big_shape = image_size // 4 * image_size // 4 * image_size // 4 * image_size // 4 * 512
+  big_shape = 8192
+
+  fc1w = tf.Variable(tf.truncated_normal(
+      [big_shape, 4096], dtype=tf.float32, stddev=0.1))
+  fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+
+  fc2w = tf.Variable(tf.truncated_normal(
+    [4096, 4096], dtype=tf.float32, stddev=0.1))
+  fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+
+  fc3w = tf.Variable(tf.truncated_normal(
+      [4096, 1000], dtype=tf.float32, stddev=0.1))
+  fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
+  
+  fc4w = tf.Variable(tf.truncated_normal(
+      [1000, 2], dtype=tf.float32, stddev=0.1))
+  fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
   
   # Model.
   def model(data):
-    conv1 = tf.nn.conv2d(data, layer1_weights, [1, 1, 1, 1], padding='SAME')
-    bias1 = tf.nn.relu(conv1 + layer1_biases)
-    pool1 = tf.nn.max_pool(bias1, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
-    conv2 = tf.nn.conv2d(pool1, layer2_weights, [1, 1, 1, 1], padding='SAME')
-    bias2 = tf.nn.relu(conv2 + layer2_biases)
-    pool2 = tf.nn.max_pool(bias2, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
-    shape = pool2.get_shape().as_list()
-    reshape = tf.reshape(pool2, [shape[0], shape[1] * shape[2] * shape[3]])
-    hidden = tf.nn.relu(tf.matmul(reshape, layer3_weights) + layer3_biases)
-    return tf.matmul(hidden, layer4_weights) + layer4_biases
+    # conv1
+    conv1_1 = tf.nn.conv2d(data, layer1_1weights, [1,1,1,1], padding='SAME')    
+    bias1_1 = tf.nn.relu(conv1_1 + layer1_1biases)
+
+    conv1_2 = tf.nn.conv2d(bias1_1, layer1_2weights, [1,1,1,1], padding='SAME')    
+    bias1_2 = tf.nn.relu(conv1_2 + layer1_2biases)
+    
+    pool1 = tf.nn.max_pool(bias1_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+
+    # conv2
+    conv2_1 = tf.nn.conv2d(pool1, layer2_1weights, [1,1,1,1], padding='SAME')    
+    bias2_1 = tf.nn.relu(conv2_1 + layer2_1biases)
+
+    conv2_2 = tf.nn.conv2d(bias2_1, layer2_2weights, [1,1,1,1], padding='SAME')    
+    bias2_2 = tf.nn.relu(conv2_2 + layer2_2biases)
+    
+    pool2 = tf.nn.max_pool(bias2_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+
+    # conv3
+    conv3_1 = tf.nn.conv2d(pool2, layer3_1weights, [1,1,1,1], padding='SAME')    
+    bias3_1 = tf.nn.relu(conv3_1 + layer3_1biases)
+
+    conv3_2 = tf.nn.conv2d(bias3_1, layer3_2weights, [1,1,1,1], padding='SAME')    
+    bias3_2 = tf.nn.relu(conv3_2 + layer3_2biases)
+
+    conv3_3 = tf.nn.conv2d(bias3_2, layer3_3weights, [1,1,1,1], padding='SAME')    
+    bias3_3 = tf.nn.relu(conv3_3 + layer3_3biases)
+    
+    pool3 = tf.nn.max_pool(bias3_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+
+    # conv4
+    conv4_1 = tf.nn.conv2d(pool3, layer4_1weights, [1,1,1,1], padding='SAME')    
+    bias4_1 = tf.nn.relu(conv4_1 + layer4_1biases)
+
+    conv4_2 = tf.nn.conv2d(bias4_1, layer4_2weights, [1,1,1,1], padding='SAME')    
+    bias4_2 = tf.nn.relu(conv4_2 + layer4_2biases)
+
+    conv4_3 = tf.nn.conv2d(bias4_2, layer4_3weights, [1,1,1,1], padding='SAME')    
+    bias4_3 = tf.nn.relu(conv4_3 + layer4_3biases)
+    
+    pool4 = tf.nn.max_pool(bias4_3, [1,2,2,1], [1,2,2,1], padding='SAME')
+    
+    shape = int(np.prod(pool4.get_shape()[1:]))
+    # fully-connected layer
+    # fc1
+    # fc1w = tf.Variable(tf.truncated_normal(
+    #   [shape, 4096], dtype=tf.float32, stddev=0.1))
+    # fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+    pool4_flat = tf.reshape(pool4, [-1, shape])    
+    fc1 = tf.nn.relu(tf.matmul(pool4_flat, fc1w) + fc1b)
+
+    # fc2
+    # fc2w = tf.Variable(tf.truncated_normal(
+    #   [4096, 4096], dtype=tf.float32, stddev=0.1))
+    # fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+    fc2 = tf.nn.relu(tf.matmul(fc1, fc2w) + fc2b)
+
+    # fc3
+    # fc3w = tf.Variable(tf.truncated_normal(
+    #   [4096, 1000], dtype=tf.float32, stddev=0.1))
+    # fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
+    fc3 = tf.nn.relu(tf.matmul(fc2, fc3w) + fc3b)
+
+    # fc4
+    # fc4w = tf.Variable(tf.truncated_normal(
+    #   [1000, 2], dtype=tf.float32, stddev=0.1))
+    # fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
+    return tf.nn.relu(tf.matmul(fc3, fc4w) + fc4b)
   
   # Training computation.
   logits = model(tf_train_dataset)
