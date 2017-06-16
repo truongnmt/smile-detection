@@ -316,7 +316,7 @@ with graph.as_default():
     conv3_3 = tf.nn.conv2d(bias3_2, layer3_3weights, [1,1,1,1], padding='SAME')    
     bias3_3 = tf.nn.relu(conv3_3 + layer3_3biases)
     
-    pool3 = tf.nn.max_pool(bias3_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+    pool3 = tf.nn.max_pool(bias3_3, [1,2,2,1], [1,2,2,1], padding='SAME')
 
     # conv4
     conv4_1 = tf.nn.conv2d(pool3, layer4_1weights, [1,1,1,1], padding='SAME')    
