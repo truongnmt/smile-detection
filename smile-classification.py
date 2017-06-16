@@ -355,7 +355,7 @@ with graph.as_default():
     # fc4w = tf.Variable(tf.truncated_normal(
     #   [1000, 2], dtype=tf.float32, stddev=0.1))
     # fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
-    return tf.nn.relu(tf.matmul(fc3, fc4w) + fc4b)
+    return tf.matmul(fc3, fc4w) + fc4b
   
   # Training computation.
   logits = model(tf_train_dataset)
