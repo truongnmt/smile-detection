@@ -214,6 +214,7 @@ batch_size = 16
 patch_size = 3
 # depth = 16
 # num_hidden = 64
+drop_out = 0.5
 
 graph = tf.Graph()
 
@@ -225,6 +226,7 @@ with graph.as_default():
   tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
   tf_valid_dataset = tf.constant(valid_dataset)
   tf_test_dataset = tf.constant(test_dataset)
+  global_step = tf.Variable(0)
   
   # Variables
   layer1_1weights = tf.Variable(tf.truncated_normal(
@@ -274,20 +276,20 @@ with graph.as_default():
       [big_shape, 4096], dtype=tf.float32, stddev=0.1))
   fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
 
-  # fc2w = tf.Variable(tf.truncated_normal(
-  #   [4096, 4096], dtype=tf.float32, stddev=0.1))
-  # fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
+  fc2w = tf.Variable(tf.truncated_normal(
+    [4096, 4096], dtype=tf.float32, stddev=0.1))
+  fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
 
-  # fc3w = tf.Variable(tf.truncated_normal(
-  #     [4096, 1000], dtype=tf.float32, stddev=0.1))
-  # fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
+  fc3w = tf.Variable(tf.truncated_normal(
+      [4096, 1000], dtype=tf.float32, stddev=0.1))
+  fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
   
   fc4w = tf.Variable(tf.truncated_normal(
       [4096, 2], dtype=tf.float32, stddev=0.1))
   fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
   
   # Model.
-  def model(data):
+  def model(data, keep_prob):
     # conv1
     conv1_1 = tf.nn.conv2d(data, layer1_1weights, [1,1,1,1], padding='SAME')    
     bias1_1 = tf.nn.relu(conv1_1 + layer1_1biases)
@@ -344,43 +346,44 @@ with graph.as_default():
     # fc1 = tf.nn.relu(tf.matmul(pool4_flat, fc1w) + fc1b)
     pool3_flat = tf.reshape(pool3, [-1, shape])    
     fc1 = tf.nn.relu(tf.matmul(pool3_flat, fc1w) + fc1b)
-    # drop1 = tf.nn.dropout(fc1, keep_prob)
+    drop1 = tf.nn.dropout(fc1, keep_prob)
 
     # fc2
     # fc2w = tf.Variable(tf.truncated_normal(
     #   [4096, 4096], dtype=tf.float32, stddev=0.1))
     # fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
-    # fc2 = tf.nn.relu(tf.matmul(fc1, fc2w) + fc2b)
-    # drop1 = tf.nn.dropout(fc2, keep_prob)
+    fc2 = tf.nn.relu(tf.matmul(drop1, fc2w) + fc2b)
+    drop2 = tf.nn.dropout(fc2, keep_prob)
 
     # fc3
     # fc3w = tf.Variable(tf.truncated_normal(
     #   [4096, 1000], dtype=tf.float32, stddev=0.1))
     # fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
     # fc3 = tf.nn.relu(tf.matmul(fc2, fc3w) + fc3b)
-    # fc3 = tf.nn.relu(tf.matmul(drop1, fc3w) + fc3b)
-    # drop2 = tf.nn.dropout(fc3, keep_prob)
+    fc3 = tf.nn.relu(tf.matmul(drop2, fc3w) + fc3b)
+    drop3 = tf.nn.dropout(fc3, keep_prob)
 
     # fc4
     # fc4w = tf.Variable(tf.truncated_normal(
     #   [1000, 2], dtype=tf.float32, stddev=0.1))
     # fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
-    return tf.matmul(fc1, fc4w) + fc4b
+    return tf.matmul(drop3, fc4w) + fc4b
   
   # Training computation.
-  logits = model(tf_train_dataset)
+  logits = model(tf_train_dataset, drop_out)
   loss = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_labels, logits=logits))
     
   # Optimizer.
-  optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(loss)
+  learning_rate = tf.train.exponential_decay(1e-5, global_step, 1000, 0.85, staircase=True)
+  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
   
   # Predictions for the training, validation, and test data.
   train_prediction = tf.nn.softmax(logits)
-  valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
-  test_prediction = tf.nn.softmax(model(tf_test_dataset))
+  valid_prediction = tf.nn.softmax(model(tf_valid_dataset, 1.0))
+  test_prediction = tf.nn.softmax(model(tf_test_dataset, 1.0))
 
-num_steps = 20001
+num_steps = 5001
 
 with tf.Session(graph=graph) as session:
   tf.initialize_all_variables().run()
