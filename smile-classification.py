@@ -209,11 +209,11 @@ def accuracy(predictions, labels):
   return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
           / predictions.shape[0])
 
+
 batch_size = 16
-patch_size = 5
-depth = 16
-num_hidden = 64
-beta_regul = 1e-3
+patch_size = 3
+# depth = 16
+# num_hidden = 64
 drop_out = 0.5
 
 graph = tf.Graph()
@@ -230,44 +230,44 @@ with graph.as_default():
   
   # Variables
   layer1_1weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 3, 64], stddev=0.1)) 
-  layer1_1biases = tf.Variable(tf.zeros([64]))
+      [3, 3, 3, 32], stddev=0.1)) 
+  layer1_1biases = tf.Variable(tf.zeros([32]))
 
   layer1_2weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 64, 64], stddev=0.1))
-  layer1_2biases = tf.Variable(tf.constant(0.0, shape=[64]))
+      [3, 3, 32, 32], stddev=0.1))
+  layer1_2biases = tf.Variable(tf.constant(1.0, shape=[32]))
   
   layer2_1weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 64, 128], stddev=0.1))
-  layer2_1biases = tf.Variable(tf.constant(0.0, shape=[128]))
+      [3, 3, 32, 64], stddev=0.1))
+  layer2_1biases = tf.Variable(tf.constant(1.0, shape=[64]))
 
   layer2_2weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 128, 128], stddev=0.1))
-  layer2_2biases = tf.Variable(tf.constant(0.0, shape=[128]))
+      [3, 3, 64, 64], stddev=0.1))
+  layer2_2biases = tf.Variable(tf.constant(1.0, shape=[64]))
 
   layer3_1weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 128, 256], stddev=0.1))
-  layer3_1biases = tf.Variable(tf.constant(0.0, shape=[256]))
+      [3, 3, 64, 128], stddev=0.1))
+  layer3_1biases = tf.Variable(tf.constant(1.0, shape=[128]))
 
   layer3_2weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 256, 256], stddev=0.1))
-  layer3_2biases = tf.Variable(tf.constant(0.0, shape=[256]))
+      [3, 3, 128, 128], stddev=0.1))
+  layer3_2biases = tf.Variable(tf.constant(1.0, shape=[128]))
 
   layer3_3weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 256, 256], stddev=0.1))
-  layer3_3biases = tf.Variable(tf.constant(0.0, shape=[256]))
+      [3, 3, 128, 128], stddev=0.1))
+  layer3_3biases = tf.Variable(tf.constant(1.0, shape=[128]))
 
-  layer4_1weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 256, 512], stddev=0.1))
-  layer4_1biases = tf.Variable(tf.constant(0.0, shape=[512]))
+  # layer4_1weights = tf.Variable(tf.truncated_normal(
+  #     [3, 3, 256, 512], stddev=0.1))
+  # layer4_1biases = tf.Variable(tf.constant(1.0, shape=[512]))
 
-  layer4_2weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 512, 512], stddev=0.1))
-  layer4_2biases = tf.Variable(tf.constant(0.0, shape=[512]))
+  # layer4_2weights = tf.Variable(tf.truncated_normal(
+  #     [3, 3, 512, 512], stddev=0.1))
+  # layer4_2biases = tf.Variable(tf.constant(1.0, shape=[512]))
 
-  layer4_3weights = tf.Variable(tf.truncated_normal(
-      [3, 3, 512, 512], stddev=0.1))
-  layer4_3biases = tf.Variable(tf.constant(0.0, shape=[512]))
+  # layer4_3weights = tf.Variable(tf.truncated_normal(
+  #     [3, 3, 512, 512], stddev=0.1))
+  # layer4_3biases = tf.Variable(tf.constant(1.0, shape=[512]))
 
   # big_shape = image_size // 4 * image_size // 4 * image_size // 4 * image_size // 4 * 512
   big_shape = 8192
@@ -285,7 +285,7 @@ with graph.as_default():
   fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
   
   fc4w = tf.Variable(tf.truncated_normal(
-      [1000, 2], dtype=tf.float32, stddev=0.1))
+      [4096, 2], dtype=tf.float32, stddev=0.1))
   fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
   
   # Model.
@@ -318,57 +318,65 @@ with graph.as_default():
     conv3_3 = tf.nn.conv2d(bias3_2, layer3_3weights, [1,1,1,1], padding='SAME')    
     bias3_3 = tf.nn.relu(conv3_3 + layer3_3biases)
     
-    pool3 = tf.nn.max_pool(bias3_2, [1,2,2,1], [1,2,2,1], padding='SAME')
+    pool3 = tf.nn.max_pool(bias3_3, [1,2,2,1], [1,2,2,1], padding='SAME')
 
     # conv4
-    conv4_1 = tf.nn.conv2d(pool3, layer4_1weights, [1,1,1,1], padding='SAME')    
-    bias4_1 = tf.nn.relu(conv4_1 + layer4_1biases)
+    # conv4_1 = tf.nn.conv2d(pool3, layer4_1weights, [1,1,1,1], padding='SAME')    
+    # bias4_1 = tf.nn.relu(conv4_1 + layer4_1biases)
 
-    conv4_2 = tf.nn.conv2d(bias4_1, layer4_2weights, [1,1,1,1], padding='SAME')    
-    bias4_2 = tf.nn.relu(conv4_2 + layer4_2biases)
+    # conv4_2 = tf.nn.conv2d(bias4_1, layer4_2weights, [1,1,1,1], padding='SAME')    
+    # bias4_2 = tf.nn.relu(conv4_2 + layer4_2biases)
 
-    conv4_3 = tf.nn.conv2d(bias4_2, layer4_3weights, [1,1,1,1], padding='SAME')    
-    bias4_3 = tf.nn.relu(conv4_3 + layer4_3biases)
+    # conv4_3 = tf.nn.conv2d(bias4_2, layer4_3weights, [1,1,1,1], padding='SAME')    
+    # bias4_3 = tf.nn.relu(conv4_3 + layer4_3biases)
     
-    pool4 = tf.nn.max_pool(bias4_3, [1,2,2,1], [1,2,2,1], padding='SAME')
+    # pool4 = tf.nn.max_pool(bias4_3, [1,2,2,1], [1,2,2,1], padding='SAME')
     
-    shape = int(np.prod(pool4.get_shape()[1:]))
+    # shape = int(np.prod(pool4.get_shape()[1:]))
+    shape = int(np.prod(pool3.get_shape()[1:]))
+
+
+
     # fully-connected layer
     # fc1
     # fc1w = tf.Variable(tf.truncated_normal(
     #   [shape, 4096], dtype=tf.float32, stddev=0.1))
     # fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
-    pool4_flat = tf.reshape(pool4, [-1, shape])    
-    fc1 = tf.nn.relu(tf.matmul(pool4_flat, fc1w) + fc1b)
+    # pool4_flat = tf.reshape(pool4, [-1, shape])    
+    # fc1 = tf.nn.relu(tf.matmul(pool4_flat, fc1w) + fc1b)
+    pool3_flat = tf.reshape(pool3, [-1, shape])    
+    fc1 = tf.nn.relu(tf.matmul(pool3_flat, fc1w) + fc1b)
+    drop1 = tf.nn.dropout(fc1, keep_prob)
 
     # fc2
     # fc2w = tf.Variable(tf.truncated_normal(
     #   [4096, 4096], dtype=tf.float32, stddev=0.1))
     # fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32))
-    fc2 = tf.nn.relu(tf.matmul(fc1, fc2w) + fc2b)
+    fc2 = tf.nn.relu(tf.matmul(drop1, fc2w) + fc2b)
+    drop2 = tf.nn.dropout(fc2, keep_prob)
 
     # fc3
     # fc3w = tf.Variable(tf.truncated_normal(
     #   [4096, 1000], dtype=tf.float32, stddev=0.1))
     # fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
-    fc3 = tf.nn.relu(tf.matmul(fc2, fc3w) + fc3b)
-    
-    drop = tf.nn.dropout(fc3, keep_prob)
+    # fc3 = tf.nn.relu(tf.matmul(fc2, fc3w) + fc3b)
+    fc3 = tf.nn.relu(tf.matmul(drop2, fc3w) + fc3b)
+    drop3 = tf.nn.dropout(fc3, keep_prob)
 
     # fc4
     # fc4w = tf.Variable(tf.truncated_normal(
     #   [1000, 2], dtype=tf.float32, stddev=0.1))
     # fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
-    return tf.nn.relu(tf.matmul(drop, fc4w) + fc4b)
+    return tf.matmul(drop3, fc4w) + fc4b
   
   # Training computation.
   logits = model(tf_train_dataset, drop_out)
   loss = tf.reduce_mean(
-    tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=tf_train_labels))
+    tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_labels, logits=logits))
     
   # Optimizer.
-  learning_rate = tf.train.exponential_decay(0.05, global_step, 1000, 0.85, staircase=True)
-  optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(loss)
+  learning_rate = tf.train.exponential_decay(1e-5, global_step, 1000, 0.85, staircase=True)
+  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
   
   # Predictions for the training, validation, and test data.
   train_prediction = tf.nn.softmax(logits)
@@ -378,9 +386,8 @@ with graph.as_default():
 num_steps = 5001
 
 with tf.Session(graph=graph) as session:
-  tf.global_variables_initializer().run()
+  tf.initialize_all_variables().run()
   print('Initialized')
-  
   for step in range(num_steps):
     offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
     batch_data = train_dataset[offset:(offset + batch_size), :, :, :]
@@ -393,5 +400,4 @@ with tf.Session(graph=graph) as session:
       print('Minibatch accuracy: %.1f%%' % accuracy(predictions, batch_labels))
       print('Validation accuracy: %.1f%%' % accuracy(
         valid_prediction.eval(), valid_labels))
-
   print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
