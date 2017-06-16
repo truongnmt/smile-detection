@@ -1,6 +1,6 @@
 # Smile Classification
 
-We present an automated approach for smile detection on GENKI4K dataset.
+We present an automated approach for smile detection on [GENKI4K dataset](http://mplab.ucsd.edu/wordpress/?page_id=398).
 
 ### Prerequisites
 
