@@ -209,12 +209,11 @@ def accuracy(predictions, labels):
   return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
           / predictions.shape[0])
 
+
 batch_size = 16
 patch_size = 5
 depth = 16
 num_hidden = 64
-beta_regul = 1e-3
-drop_out = 0.5
 
 graph = tf.Graph()
 
@@ -226,7 +225,6 @@ with graph.as_default():
   tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
   tf_valid_dataset = tf.constant(valid_dataset)
   tf_test_dataset = tf.constant(test_dataset)
-  global_step = tf.Variable(0)
   
   # Variables
   layer1_1weights = tf.Variable(tf.truncated_normal(
@@ -289,7 +287,7 @@ with graph.as_default():
   fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
   
   # Model.
-  def model(data, keep_prob):
+  def model(data):
     # conv1
     conv1_1 = tf.nn.conv2d(data, layer1_1weights, [1,1,1,1], padding='SAME')    
     bias1_1 = tf.nn.relu(conv1_1 + layer1_1biases)
@@ -352,30 +350,27 @@ with graph.as_default():
     #   [4096, 1000], dtype=tf.float32, stddev=0.1))
     # fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32))
     fc3 = tf.nn.relu(tf.matmul(fc2, fc3w) + fc3b)
-    
-    drop = tf.nn.dropout(fc3, keep_prob)
 
     # fc4
     # fc4w = tf.Variable(tf.truncated_normal(
     #   [1000, 2], dtype=tf.float32, stddev=0.1))
     # fc4b = tf.Variable(tf.constant(1.0, shape=[2], dtype=tf.float32))
-    return tf.nn.relu(tf.matmul(drop, fc4w) + fc4b)
+    return tf.nn.relu(tf.matmul(fc3, fc4w) + fc4b)
   
   # Training computation.
-  logits = model(tf_train_dataset, drop_out)
+  logits = model(tf_train_dataset)
   loss = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=tf_train_labels))
     
   # Optimizer.
-  learning_rate = tf.train.exponential_decay(0.05, global_step, 1000, 0.85, staircase=True)
   optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(loss)
   
   # Predictions for the training, validation, and test data.
   train_prediction = tf.nn.softmax(logits)
-  valid_prediction = tf.nn.softmax(model(tf_valid_dataset, 1.0))
-  test_prediction = tf.nn.softmax(model(tf_test_dataset, 1.0))
+  valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
+  test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
-num_steps = 5001
+num_steps = 1001
 
 with tf.Session(graph=graph) as session:
   tf.global_variables_initializer().run()
